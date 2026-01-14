@@ -1,212 +1,219 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-  <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: 'Sarabun', sans-serif; background-color: #f4f4f9; padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #333; }
-    
-    /* Page Styling */
-    .page { display: none; }
-    .active { display: block; }
-    
-    /* Table Styling */
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
-    th { background-color: #007bff; color: white; }
-    
-    /* Form Styling */
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    select, input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    
-    /* Button Styling */
-    .btn { background-color: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; margin-top: 10px; }
-    .btn:hover { background-color: #218838; }
-    .btn-secondary { background-color: #6c757d; margin-top: 10px; }
-    .btn-secondary:hover { background-color: #5a6268; }
-    
-    /* Floating Button for Page 1 */
-    .fab-btn { margin-bottom: 20px; }
-
-    /* Loading Overlay */
-    #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 999; text-align: center; padding-top: 200px; font-size: 20px; }
-    
-    /* Toast Message */
-    #toast { visibility: hidden; min-width: 250px; margin-left: -125px; background-color: #333; color: #fff; text-align: center; border-radius: 2px; padding: 16px; position: fixed; z-index: 1; left: 50%; bottom: 30px; font-size: 17px; }
-    #toast.show { visibility: visible; -webkit-animation: fadein 0.5s, fadeout 0.5s 1.5s; animation: fadein 0.5s, fadeout 0.5s 1.5s; } /* 1.5s delay for fadeout means show for roughly that time */
-    
-    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-    @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-  </style>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบแจ้งการโอนเงิน</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; padding: 20px; }
+        .container { max-width: 600px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .hidden { display: none; }
+        .loading { text-align: center; color: #666; }
+        #successMessage { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 5px; z-index: 1000;
+        }
+    </style>
 </head>
 <body>
 
-<div id="loading">กำลังประมวลผล...</div>
-<div id="toast">ดำเนินการสำเร็จ</div>
-
 <div class="container">
-  
-  <div id="page1" class="page active">
-    <h2>สรุปยอดการโอนเงิน</h2>
-    <button class="btn fab-btn" onclick="goToPage2()">+ แจ้งโอนเงิน</button>
-    <div style="overflow-x:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>ชื่อ - นามสกุล</th>
-            <th>จ่ายแล้ว</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <tr><td colspan="2" style="text-align:center;">กำลังโหลดข้อมูล...</td></tr>
-        </tbody>
-      </table>
+    <h3 class="text-center mb-4">ระบบการเงินครูทหาร</h3>
+
+    <div id="page1">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>สถานะการจ่ายเงิน</h5>
+            <button class="btn btn-primary" onclick="showPage2()">แจ้งโอนเงิน</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>ยศ ชื่อ</th>
+                        <th>นามสกุล</th>
+                        <th>จ่ายแล้ว</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    </tbody>
+            </table>
+        </div>
+        <div id="loading1" class="loading">กำลังโหลดข้อมูล...</div>
     </div>
-  </div>
 
-  <div id="page2" class="page">
-    <h2>แบบฟอร์มแจ้งโอนเงิน</h2>
-    <form id="transferForm" onsubmit="handleFormSubmit(event)">
-      
-      <div class="form-group">
-        <label>เลือกรายชื่อ</label>
-        <select id="userSelect" required>
-          <option value="">-- กรุณาเลือก --</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label>จำนวนเงิน (บาท)</label>
-        <input type="number" id="amount" placeholder="ระบุจำนวนเงิน" required>
-      </div>
-      
-      <div class="form-group">
-        <label>หลักฐานการโอน (สลิป)</label>
-        <input type="file" id="fileInput" accept="image/*,application/pdf" required>
-      </div>
-      
-      <button type="submit" class="btn">ยืนยันข้อมูล</button>
-      <button type="button" class="btn btn-secondary" onclick="goToPage1()">กลับหน้าแรก</button>
-    </form>
-  </div>
+    <div id="page2" class="hidden">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>กรอกข้อมูลการโอน</h5>
+            <button class="btn btn-secondary btn-sm" onclick="showPage1()">กลับหน้าแรก</button>
+        </div>
+        
+        <form id="transferForm" onsubmit="submitForm(event)">
+            <div class="mb-3">
+                <label class="form-label">เลือกรายชื่อ</label>
+                <select id="userSelect" class="form-select" required>
+                    <option value="" disabled selected>-- กรุณาเลือก --</option>
+                    </select>
+            </div>
 
+            <div class="mb-3">
+                <label class="form-label">จำนวนเงินที่โอน</label>
+                <input type="number" id="amount" class="form-control" placeholder="ระบุจำนวนเงิน" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">หลักฐานการโอน (สลิป)</label>
+                <input type="file" id="slipFile" class="form-control" accept="image/*" required>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn btn-success w-100">ยืนยันข้อมูล</button>
+            <div id="loadingSubmit" class="loading mt-2 hidden">กำลังบันทึกข้อมูล... กรุณารอสักครู่</div>
+        </form>
+    </div>
 </div>
 
+<div id="successMessage" class="hidden">ดำเนินการสำเร็จ</div>
+
 <script>
-  // เริ่มต้นทำงานเมื่อโหลดหน้าเว็บ
-  window.onload = function() {
-    loadPage1Data();
-  };
+    // ******************************************************
+    // นำ URL ที่ได้จากการ Deploy Web App มาใส่ตรงนี้
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxOKVEb3AycbObxDS_xHZRzs4G_8AbshC89yYVaROHTXR7l-jxwdhwPXohUASBtpqmkOQ/exec'; 
+    // ******************************************************
 
-  function showLoading(show) {
-    document.getElementById('loading').style.display = show ? 'block' : 'none';
-  }
+    let usersData = [];
 
-  // --- PAGE 1 LOGIC ---
-  function loadPage1Data() {
-    google.script.run.withSuccessHandler(renderTable).getSummaryData();
-  }
+    // เริ่มต้นโหลดข้อมูลเมื่อเปิดเว็บ
+    window.onload = loadData;
 
-  function renderTable(data) {
-    const tbody = document.getElementById('tableBody');
-    tbody.innerHTML = '';
-    
-    if (data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">ไม่พบข้อมูล</td></tr>';
-      return;
+    function loadData() {
+        document.getElementById('loading1').classList.remove('hidden');
+        document.getElementById('userTableBody').innerHTML = '';
+        
+        fetch(`${SCRIPT_URL}?op=getData`)
+            .then(response => response.json())
+            .then(data => {
+                usersData = data;
+                renderTable(data);
+                populateDropdown(data);
+                document.getElementById('loading1').classList.add('hidden');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loading1').textContent = 'โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรช';
+            });
     }
 
-    data.forEach(row => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${row.rankName} ${row.lastName}</td><td>${Number(row.paid).toLocaleString()}</td>`;
-      tbody.appendChild(tr);
-    });
-  }
-
-  // --- NAVIGATION ---
-  function goToPage2() {
-    document.getElementById('page1').classList.remove('active');
-    document.getElementById('page2').classList.add('active');
-    loadDropdown(); // โหลดรายชื่อใหม่ทุกครั้งที่เข้าหน้า 2 เพื่อความ update
-  }
-
-  function goToPage1() {
-    document.getElementById('page2').classList.remove('active');
-    document.getElementById('page1').classList.add('active');
-    loadPage1Data(); // รีเฟรชข้อมูลหน้าแรก
-  }
-
-  // --- PAGE 2 LOGIC ---
-  function loadDropdown() {
-    const select = document.getElementById('userSelect');
-    if (select.options.length > 1) return; // โหลดแค่ครั้งเดียว หรือถ้าต้องการโหลดใหม่เสมอให้ลบ condition นี้
-
-    google.script.run.withSuccessHandler(options => {
-      select.innerHTML = '<option value="">-- กรุณาเลือก --</option>';
-      options.forEach(opt => {
-        // เก็บค่า rank และ last name ไว้ใน value ของ option โดยใช้ separator เช่น '|||'
-        const option = document.createElement('option');
-        option.value = JSON.stringify({ rank: opt.val_rankName, last: opt.val_lastName });
-        option.text = opt.text;
-        select.appendChild(option);
-      });
-    }).getDropdownList();
-  }
-
-  function handleFormSubmit(e) {
-    e.preventDefault();
-    showLoading(true);
-
-    const selectVal = document.getElementById('userSelect').value;
-    if (!selectVal) { alert('กรุณาเลือกรายชื่อ'); showLoading(false); return; }
-    
-    const userData = JSON.parse(selectVal);
-    const amount = document.getElementById('amount').value;
-    const fileInput = document.getElementById('fileInput');
-    const file = fileInput.files[0];
-
-    // อ่านไฟล์เพื่อเตรียมส่ง
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      const content = e.target.result.split(',')[1]; // ตัด header 'data:image/...' ออก
-      
-      const formObj = {
-        rankName: userData.rank,
-        lastName: userData.last,
-        amount: amount,
-        fileName: file.name,
-        mimeType: file.type,
-        fileData: content
-      };
-
-      google.script.run.withSuccessHandler(onSuccess).saveTransferData(formObj);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function onSuccess(res) {
-    showLoading(false);
-    if (res.success) {
-      // แสดง Toast Message
-      const toast = document.getElementById("toast");
-      toast.className = "show";
-      
-      // Reset Form
-      document.getElementById("transferForm").reset();
-
-      // รอ 1.5 วินาที (1500ms) แล้วกลับหน้า 1
-      setTimeout(function(){ 
-        toast.className = toast.className.replace("show", "");
-        goToPage1();
-      }, 1500);
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + res.error);
+    function renderTable(data) {
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = '';
+        data.forEach(user => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${user.rankName}</td>
+                <td>${user.surname}</td>
+                <td class="text-end text-success fw-bold">${user.paid}</td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
-  }
+
+    function populateDropdown(data) {
+        const select = document.getElementById('userSelect');
+        // เก็บ option แรกไว้ (เลือกรายชื่อ)
+        select.innerHTML = '<option value="" disabled selected>-- กรุณาเลือก --</option>';
+        
+        data.forEach((user, index) => {
+            const option = document.createElement('option');
+            // เก็บค่า index ไว้เพื่อดึงข้อมูลกลับมาใช้ง่ายๆ
+            option.value = index; 
+            option.text = `${user.rankName} ${user.surname}`;
+            select.appendChild(option);
+        });
+    }
+
+    function showPage2() {
+        document.getElementById('page1').classList.add('hidden');
+        document.getElementById('page2').classList.remove('hidden');
+    }
+
+    function showPage1() {
+        document.getElementById('page2').classList.add('hidden');
+        document.getElementById('page1').classList.remove('hidden');
+    }
+
+    function submitForm(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingDiv = document.getElementById('loadingSubmit');
+        const userIndex = document.getElementById('userSelect').value;
+        const amount = document.getElementById('amount').value;
+        const fileInput = document.getElementById('slipFile');
+        
+        if (fileInput.files.length === 0) {
+            alert("กรุณาอัปโหลดสลิป");
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const selectedUser = usersData[userIndex];
+
+        submitBtn.disabled = true;
+        loadingDiv.classList.remove('hidden');
+
+        // แปลงไฟล์เป็น Base64
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function() {
+            const fileBase64 = reader.result.split(',')[1]; // ตัดส่วน header ออก
+            
+            const payload = {
+                rankName: selectedUser.rankName,
+                surname: selectedUser.surname,
+                amount: amount,
+                fileName: file.name,
+                mimeType: file.type,
+                fileBase64: fileBase64
+            };
+
+            // ส่งข้อมูลไปยัง Google Apps Script
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === 'success') {
+                    showSuccessAndReset();
+                } else {
+                    alert('เกิดข้อผิดพลาด: ' + result.message);
+                }
+            })
+            .catch(error => {
+                alert('การเชื่อมต่อผิดพลาด');
+                console.error(error);
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                loadingDiv.classList.add('hidden');
+            });
+        };
+    }
+
+    function showSuccessAndReset() {
+        const successMsg = document.getElementById('successMessage');
+        successMsg.classList.remove('hidden');
+        
+        // รีเซ็ตฟอร์ม
+        document.getElementById('transferForm').reset();
+
+        setTimeout(() => {
+            successMsg.classList.add('hidden');
+            showPage1();
+            // โหลดข้อมูลใหม่เพื่ออัปเดต (ถ้าต้องการ)
+            // loadData(); 
+        }, 1500);
+    }
 </script>
 
 </body>
